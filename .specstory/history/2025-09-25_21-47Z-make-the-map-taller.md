@@ -243,3 +243,137 @@ Your token `pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4
 
 ---
 
+_**User (2025-09-25 18:32Z)**_
+
+shjoudl I name my environment variable next_public_mapbox_token in vercel
+
+pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ
+
+---
+
+_**Assistant (claude-4-sonnet)**_
+
+Yes, you should name your environment variable `NEXT_PUBLIC_MAPBOX_TOKEN` in Vercel. The `NEXT_PUBLIC_` prefix is required for environment variables that need to be accessible in the browser (client-side code).
+
+Here's how to set it up in Vercel:
+
+1. **In your Vercel dashboard:**
+   - Go to your project settings
+   - Navigate to "Environment Variables"
+   - Add a new variable:
+     - **Name:** `NEXT_PUBLIC_MAPBOX_TOKEN`
+     - **Value:** `pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ`
+     - **Environment:** Production, Preview, and Development (select all)
+
+2. **For local development:**
+   Create a `.env.local` file in your project root:
+   ```
+   NEXT_PUBLIC_MAPBOX_TOKEN=pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ
+   ```
+
+Your code is already set up to use this environment variable correctly:
+```typescript
+const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || HARDCODED_MAPBOX_TOKEN;
+```
+
+This way, when deployed to Vercel, it will use the environment variable, and locally it will fall back to your hardcoded token if the `.env.local` file isn't present.
+
+**Important Notes:**
+- The `NEXT_PUBLIC_` prefix exposes the variable to the browser, which is necessary for Mapbox
+- Mapbox tokens are designed to be public (they have domain restrictions for security)
+- After adding the environment variable in Vercel, you'll need to redeploy your application
+
+---
+
+_**User (2025-09-25 18:32Z)**_
+
+for some reason this works when I make 
+
+This line have a non real token
+
+---
+
+_**Assistant (claude-4-sonnet)**_
+
+I see the issue! Looking at your selected line, there's a character corruption in your token. The token should be:
+
+`pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ`
+
+But in the code it shows:
+`pk.eyJ1IjoiYWZoYXF1ZSIsImHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ`
+
+Notice the difference: `ImEiOiJjbWZ6` vs `ImHdib3UwN3lm` - there's a character corruption.
+
+Let me fix this by updating the token to the correct one:
+
+---
+
+Tool use: **search_replace**
+
+
+<details><summary>Edit file: app/components/MapboxMap.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -63,5 +63,5 @@
+          // Using provided Mapbox token for afhaque account
+          // ========================================
+-         const HARDCODED_MAPBOX_TOKEN = 'pk.eyJ1IjoiYWZoYXF1ZSIsImHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ';
++         const HARDCODED_MAPBOX_TOKEN = 'pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ';
+          
+          // Get token from environment or hardcoded value
+```
+
+</details>
+
+---
+
+Perfect! I've fixed the corrupted token. The issue was that there were some characters that got corrupted in the token string. The corrected token is now:
+
+`pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ`
+
+This should now work properly. The corruption likely happened during a copy/paste operation or encoding issue. Mapbox tokens are very sensitive to character accuracy, so even a single wrong character will cause authentication failures.
+
+---
+
+_**User (2025-09-25 18:32Z)**_
+
+no what I am saying is that this does not work:
+
+
+But thjis works
+MWN6dXNsIn0.
+
+
+---
+
+_**Assistant (claude-4-sonnet)**_
+
+I understand now! You're saying that when you use a fake/non-real token like `MWN6dXNsIn0.`, the map works, but when you use your actual valid Mapbox token, it doesn't work.
+
+This suggests there might be an issue with:
+
+1. **Token permissions/restrictions** - Your actual token might have domain restrictions that prevent it from working on localhost or your current domain
+2. **Token scope** - The token might not have the right scopes enabled
+3. **Account limits** - There might be usage limits or billing issues with your Mapbox account
+
+Let me help you troubleshoot this. Could you check a few things:
+
+1. **Check your Mapbox token settings:**
+   - Go to https://account.mapbox.com/access-tokens/
+   - Click on your token to see its settings
+   - Make sure it has the right scopes (at minimum: "Web APIs" should be enabled)
+   - Check if there are any URL restrictions that might be blocking localhost
+
+2. **Try creating a new token:**
+   - Create a fresh token with full permissions
+   - Make sure "Public scopes" includes at least the basic web APIs
+
+The fact that a fake token "works" (probably just gets past the initial validation) while your real token fails suggests the issue is with the token configuration rather than the code itself.
+
+What error messages do you see in the browser console when using your real token?
+
+---
+
