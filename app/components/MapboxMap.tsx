@@ -272,7 +272,7 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
   // Error state
   if (error) {
     return (
-      <div className="w-full h-96 flex items-center justify-center bg-gray-800 rounded-lg">
+      <div className="w-full h-[600px] flex items-center justify-center bg-gray-800 rounded-lg">
         <div className="text-center p-8">
           <div className="text-red-400 text-lg font-semibold mb-4">❌ Mapbox Error</div>
           <div className="text-gray-300 text-sm mb-4">{error}</div>
@@ -285,7 +285,7 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
   // Loading state
   if (!mapboxLoaded) {
     return (
-      <div className="w-full h-96 flex items-center justify-center bg-gray-800 rounded-lg">
+      <div className="w-full h-[600px] flex items-center justify-center bg-gray-800 rounded-lg">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
           <div className="text-gray-300 mb-2">Loading Mapbox GL JS...</div>
@@ -298,7 +298,7 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
   }
 
   return (
-    <div className="relative w-full h-96">
+    <div className="relative w-full h-[600px]">
       <div ref={mapContainer} className="w-full h-full rounded-lg" />
       
       <div className="absolute top-4 left-4 bg-black bg-opacity-75 text-white p-3 rounded-lg text-sm z-10">
