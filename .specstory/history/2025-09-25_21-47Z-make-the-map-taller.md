@@ -142,11 +142,104 @@ Tool use: **todo_write**
 
 ---
 
+Tool use: **MultiEdit**
 
+
+<details><summary>Edit file: app/components/MapboxMap.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 3
+
+```diff
+@@ -61,7 +61,5 @@
+          // ========================================
+          // MAPBOX TOKEN CONFIGURATION:
+-         // Option 1: Set NEXT_PUBLIC_MAPBOX_TOKEN in .env.local
+-         // Option 2: Replace YOUR_MAPBOX_TOKEN_HERE with your actual token
+-         // Get it from: https://account.mapbox.com/access-tokens/
++         // Using provided Mapbox token for afhaque account
+          // ========================================
+          const HARDCODED_MAPBOX_TOKEN = 'pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ';
+```
+
+**Chunk 2**
+Lines added: 4, lines removed: 9
+
+```diff
+@@ -70,14 +68,9 @@
+          const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || HARDCODED_MAPBOX_TOKEN;
+          
+-         // Check if token is still placeholder
+-         if (token === 'YOUR_MAPBOX_TOKEN_HERE' || token === 'pk.eyJ1IjoiZXhhbXBsZSIsImEiOiJjbGF2ZWRhc2QifQ.example_token_replace_with_real_one') {
+-           const errorMsg = 'Please set a valid Mapbox token';
++         // Validate token format
++         if (!token || !token.startsWith('pk.')) {
++           const errorMsg = 'Invalid or missing Mapbox token';
+            console.error('❌ MAPBOX TOKEN ERROR:', errorMsg);
+-           console.log('📝 Instructions:');
+-           console.log('1. Go to https://account.mapbox.com/access-tokens/');
+-           console.log('2. Create a new token or copy an existing one');
+-           console.log('3. Either:');
+-           console.log('   - Add NEXT_PUBLIC_MAPBOX_TOKEN=your_token to .env.local');
+-           console.log('   - Replace YOUR_MAPBOX_TOKEN_HERE in the code with your token');
++           console.log('📝 Expected format: pk.eyJ...');
+            setError(errorMsg);
+            return;
+```
+
+**Chunk 3**
+Lines added: undefined, lines removed: 5
+
+```diff
+@@ -307,9 +300,4 @@
+            {sightings.length} total sightings • Click clusters to zoom • Click markers for details
+          </div>
+-         {(!process.env.NEXT_PUBLIC_MAPBOX_TOKEN && !sightings.length) && (
+-           <div className="text-xs text-yellow-300 mt-1">
+-             ⚠️ Set up Mapbox token - check console for instructions
+-           </div>
+-         )}
+        </div>
+      </div>
+```
+
+</details>
 
 ---
 
+Tool use: **todo_write**
 
+## Todo List
+
+- [x] Update token validation logic to properly handle the provided token
+- [x] Fix inconsistent token warning display logic
+- [x] Update comments to reflect the actual token being used
+
+---
+
+Tool use: **read_lints**
+
+---
+
+Perfect! I've fixed the inconsistencies in the token detection logic:
+
+**Plan:**
+1. ✅ Update token validation logic to properly handle the provided token
+2. ✅ Fix inconsistent token warning display logic  
+3. ✅ Clean up comments to reflect the actual token being used
+
+**Changes Made:**
+- **Updated comments**: Replaced generic setup instructions with a note that your specific afhaque account token is being used
+- **Fixed token validation**: Removed the placeholder token checks that were looking for dummy tokens and replaced with proper token format validation (checking if it starts with 'pk.')
+- **Removed inconsistent warning**: Eliminated the conditional warning that would show up incorrectly since you have a valid token
+
+**Steps Taken:**
+1. Used MultiEdit to make all token-related changes simultaneously
+2. Simplified validation to check for proper Mapbox token format
+3. Removed the misleading warning message that appeared when no environment token was set
+4. Updated comments to reflect that a real token is now in use
+
+Your token `pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ` is now properly integrated and the validation logic is consistent throughout the component.
 
 ---
 
