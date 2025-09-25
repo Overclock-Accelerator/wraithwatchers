@@ -62,10 +62,10 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
         // MAPBOX TOKEN CONFIGURATION:
         // Using provided Mapbox token for afhaque account
         // ========================================
-        const HARDCODED_MAPBOX_TOKEN = 'pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ';
+        // const HARDCODED_MAPBOX_TOKEN = 'pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ';
         
         // Get token from environment or hardcoded value
-        const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || HARDCODED_MAPBOX_TOKEN;
+        const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
         
         // Validate token format
         if (!token || !token.startsWith('pk.')) {
