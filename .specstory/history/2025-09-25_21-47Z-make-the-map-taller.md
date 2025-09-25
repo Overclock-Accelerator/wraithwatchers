@@ -377,3 +377,148 @@ What error messages do you see in the browser console when using your real token
 
 ---
 
+_**User (2025-09-25 18:32Z)**_
+
+I notice the token only works ocassionally
+
+---
+
+_**Assistant (claude-4-sonnet)**_
+
+Ah, that's a classic Mapbox token issue! When a token "only works occasionally," it's typically due to one of these common problems:
+
+1. **Rate limiting** - You might be hitting Mapbox's request limits
+2. **Token regeneration** - If you've regenerated the token recently, there can be caching issues
+3. **Network/CDN caching** - Browser or network caching of failed requests
+4. **Concurrent requests** - Multiple map initializations causing token conflicts
+
+Let me help you add some debugging and make the token handling more robust:
+
+---
+
+Tool use: **search_replace**
+
+
+<details><summary>Edit file: app/components/MapboxMap.tsx</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -78,5 +78,7 @@
+          
+          mapboxgl.default.accessToken = token;
+-         console.log('🔑 Mapbox token set, initializing map...');
++         console.log('🔑 Mapbox token set:', token.substring(0, 20) + '...');
++         console.log('🔑 Token length:', token.length);
++         console.log('🗺️ Initializing map...');
+  
+          // Initialize map
+```
+
+</details>
+
+---
+
+Invalid: old_string and new_string are exactly the same.
+
+---
+
+Tool use: **search_replace**
+
+
+<details><summary>Edit file: app/components/MapboxMap.tsx</summary>
+
+**Chunk 1**
+Lines added: 10, lines removed: undefined
+
+```diff
+@@ -249,4 +249,14 @@
+          });
+  
++         map.current.on('error', (e: any) => {
++           console.error('❌ Mapbox map error:', e);
++           if (e.error && e.error.message) {
++             console.error('❌ Error details:', e.error.message);
++             if (e.error.message.includes('Unauthorized') || e.error.message.includes('token')) {
++               setError('Token authentication failed - check token validity');
++             }
++           }
++         });
++ 
+        } catch (error) {
+          console.error('❌ Error loading Mapbox:', error);
+```
+
+</details>
+
+---
+
+Now I've added better debugging and error handling. Here are some **quick fixes** you can try for the intermittent token issues:
+
+**Immediate Solutions:**
+
+1. **Clear browser cache completely** - Hard refresh (Ctrl+Shift+R) or clear all browser data
+2. **Try incognito/private browsing** - This eliminates caching issues
+3. **Check browser console** - Look for specific error messages when it fails
+4. **Wait a few seconds between page refreshes** - Avoid rapid reloads
+
+**Check Your Token Settings:**
+- Go to https://account.mapbox.com/access-tokens/
+- Make sure your token has **no URL restrictions** (or add `localhost:3000` if you have restrictions)
+- Verify the token has proper scopes enabled
+- Check if you're near any usage limits
+
+**Common Causes of Intermittent Issues:**
+- **Rate limiting** - Too many requests too quickly
+- **Browser caching** - Old failed requests being cached
+- **Token restrictions** - Domain/URL restrictions blocking localhost
+- **Network issues** - Intermittent connection problems
+
+The debugging I added will now show you:
+- The first 20 characters of your token (to verify it's correct)
+- Token length (should be around 100+ characters)
+- Specific error messages when authentication fails
+
+Try refreshing the page and check the console output - this should help identify exactly what's happening when it fails.
+
+---
+
+_**User (2025-09-25 18:32Z)**_
+
+are we using .env local or .env
+
+---
+
+_**Assistant (claude-4-sonnet)**_
+
+For Next.js projects, you should use `.env.local` for local development, not `.env`.
+
+Here's the difference:
+
+**`.env.local`** (recommended):
+- Loaded by Next.js automatically
+- Git-ignored by default (won't be committed to version control)
+- Used for local development secrets
+- Takes precedence over other env files
+
+**`.env`**:
+- Also loaded by Next.js
+- Usually committed to git (for shared non-secret config)
+- Should contain default/example values, not actual secrets
+
+For your Mapbox token, create a `.env.local` file in your project root:
+
+```
+NEXT_PUBLIC_MAPBOX_TOKEN=pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ
+```
+
+**Next.js Environment File Priority** (highest to lowest):
+1. `.env.local` (always loaded, git-ignored)
+2. `.env.development` / `.env.production` (environment-specific)
+3. `.env` (default for all environments)
+
+Since tokens are secrets, always use `.env.local` for local development. Your code is already set up correctly to read from `process.env.NEXT_PUBLIC_MAPBOX_TOKEN`.
+
+---
+

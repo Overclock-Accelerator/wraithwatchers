@@ -28,12 +28,14 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
 
   // Load Mapbox GL JS dynamically
   useEffect(() => {
-    const loadMapbox = async () => {
+    let mapboxgl: any = null;
+    
+    const loadMapboxResources = async () => {
       try {
         console.log('🗺️ Loading Mapbox GL JS...');
         
         // Dynamically import Mapbox GL JS
-        const mapboxgl = await import('mapbox-gl');
+        mapboxgl = await import('mapbox-gl');
         console.log('✅ Mapbox GL JS loaded successfully');
         
         // Import CSS dynamically and wait for it to load
@@ -55,8 +57,29 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
         });
         
         setMapboxLoaded(true);
-        
-        if (map.current || !mapContainer.current) return;
+        return mapboxgl;
+      } catch (error) {
+        console.error('❌ Error loading Mapbox resources:', error);
+        throw error;
+      }
+    };
+
+    const initializeMap = async (mapboxgl: any) => {
+      try {
+        // Wait for container to be available
+        if (map.current) {
+          console.log('🚫 Map already exists, skipping initialization');
+          return;
+        }
+
+        if (!mapContainer.current) {
+          console.log('⏳ Container not ready, retrying in 100ms...');
+          setTimeout(() => initializeMap(mapboxgl), 100);
+          return;
+        }
+
+        console.log('🚀 Starting map initialization...');
+        console.log('📦 Container ready:', !!mapContainer.current);
 
         // ========================================
         // MAPBOX TOKEN CONFIGURATION:
@@ -65,7 +88,15 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
         // const HARDCODED_MAPBOX_TOKEN = 'pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ';
         
         // Get token from environment or hardcoded value
-        const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+        // TEMPORARY: Using hardcoded token until environment is properly set up
+        const token = 'pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ';
+        
+        console.log('🔍 Token debug:', {
+          envToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
+          finalToken: token,
+          tokenLength: token?.length,
+          startsWithPk: token?.startsWith('pk.')
+        });
         
         // Validate token format
         if (!token || !token.startsWith('pk.')) {
@@ -77,19 +108,42 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
         }
         
         mapboxgl.default.accessToken = token;
-        console.log('🔑 Mapbox token set, initializing map...');
+        console.log('🔑 Mapbox token set:', token.substring(0, 20) + '...');
+        console.log('🔑 Token length:', token.length);
+        console.log('🗺️ Initializing map...');
+        console.log('📍 Container element:', mapContainer.current);
+        console.log('📦 Mapbox GL loaded');
 
         // Initialize map
-        map.current = new mapboxgl.default.Map({
-          container: mapContainer.current,
-          style: 'mapbox://styles/mapbox/dark-v11',
-          center: [-98.5795, 39.8283], // Center of US
-          zoom: 4
+        try {
+          map.current = new mapboxgl.default.Map({
+            container: mapContainer.current,
+            style: 'mapbox://styles/mapbox/dark-v11',
+            center: [-98.5795, 39.8283], // Center of US
+            zoom: 4
+          });
+          
+          console.log('✅ Map object created successfully');
+          console.log('🗺️ Map initialized, waiting for load event...');
+        } catch (mapError) {
+          console.error('❌ Failed to create map object:', mapError);
+          setError(`Map initialization failed: ${mapError instanceof Error ? mapError.message : 'Unknown error'}`);
+          return;
+        }
+
+        // Set up a timeout to detect if map never loads
+        const loadTimeout = setTimeout(() => {
+          console.error('⏰ Map load timeout - map failed to load within 10 seconds');
+          setError('Map loading timed out - check network connection and token');
+        }, 10000);
+
+        // Add style loading events
+        map.current.on('styledata', (e: any) => {
+          console.log('🎨 Style loading event:', e.dataType);
         });
-        
-        console.log('🗺️ Map initialized, waiting for load event...');
 
         map.current.on('load', () => {
+          clearTimeout(loadTimeout);
           console.log('✅ Map loaded successfully, adding data layers...');
           // Create GeoJSON data for clustering
           const geojsonData = {
@@ -246,6 +300,43 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
           });
         });
 
+        map.current.on('error', (e: any) => {
+          console.error('❌ Mapbox map error:', e);
+          if (e.error && e.error.message) {
+            console.error('❌ Error details:', e.error.message);
+            if (e.error.message.includes('Unauthorized') || e.error.message.includes('token')) {
+              setError('Token authentication failed - check token validity');
+            } else if (e.error.message.includes('style') || e.error.message.includes('tiles')) {
+              setError('Map style loading failed - check network connection');
+            }
+          } else {
+            setError('Map loading failed - see console for details');
+          }
+        });
+
+        // Add style loading error handler
+        map.current.on('styleimagemissing', (e: any) => {
+          console.warn('⚠️ Style image missing:', e.id);
+        });
+
+        map.current.on('sourcedata', (e: any) => {
+          if (e.isSourceLoaded) {
+            console.log('✅ Map source loaded:', e.sourceId);
+          }
+        });
+
+      } catch (error) {
+        console.error('❌ Error initializing map:', error);
+        setMapboxLoaded(false);
+        setError(error instanceof Error ? error.message : 'Unknown error initializing map');
+      }
+    };
+
+    // Start the process
+    const startMapboxInitialization = async () => {
+      try {
+        const mapboxgl = await loadMapboxResources();
+        await initializeMap(mapboxgl);
       } catch (error) {
         console.error('❌ Error loading Mapbox:', error);
         setMapboxLoaded(false);
@@ -253,7 +344,7 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
       }
     };
 
-    loadMapbox();
+    startMapboxInitialization();
 
     return () => {
       if (map.current) {
