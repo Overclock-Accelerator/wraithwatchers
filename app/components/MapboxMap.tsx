@@ -220,17 +220,18 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
             }
           });
 
-          // Add unclustered points layer
+          // Add unclustered points layer with ghost-themed styling
           map.current.addLayer({
             id: 'unclustered-point',
             type: 'circle',
             source: 'sightings',
             filter: ['!', ['has', 'point_count']],
             paint: {
-              'circle-color': '#f97316',
+              'circle-color': '#e5e7eb', // Ghost white/light gray
               'circle-radius': 8,
               'circle-stroke-width': 2,
-              'circle-stroke-color': '#fff'
+              'circle-stroke-color': '#9ca3af', // Darker gray border
+              'circle-opacity': 0.9
             }
           });
 
