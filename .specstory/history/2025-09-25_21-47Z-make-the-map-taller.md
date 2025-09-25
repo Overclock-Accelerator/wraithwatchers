@@ -95,6 +95,57 @@ Lines added: 1, lines removed: 1
 
 ---
 
+Perfect! I've successfully updated the map height from `h-96` (384px) to `h-[600px]` (600px) across all states:
+
+**Plan:**
+1. ✅ Update main map container height
+2. ✅ Update error state container height  
+3. ✅ Update loading state container height
+
+**Changes Made:**
+- Changed the main map container from `h-96` to `h-[600px]`
+- Updated both error and loading state containers to match the new height
+- This increases the map height from 384px to 600px (a 56% increase)
+
+**Steps Taken:**
+1. Read the MapboxMap component to identify current height settings
+2. Updated the main container height using search_replace
+3. Used MultiEdit to update the error and loading state containers to maintain consistency
+
+The map is now significantly taller and will provide more viewing area for the ghost sightings data.
+
+---
+
+_**User (2025-09-25 18:32Z)**_
+
+@MapboxMap.tsx there is something inconsistent about how th token is being detercted. 
+
+pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ
+
+this is my token use it everywhere.
+
+---
+
+_**Assistant (claude-4-sonnet)**_
+
+I can see the inconsistency in the token detection logic. The code is checking for placeholder tokens that don't match your actual token, and there's also an inconsistent warning display. Let me fix this by updating the token validation and ensuring your token is used consistently.
+
+---
+
+Tool use: **todo_write**
+
+## Todo List
+
+- [-] Update token validation logic to properly handle the provided token
+- [ ] Fix inconsistent token warning display logic
+- [ ] Update comments to reflect the actual token being used
+
+---
+
+
+
+---
+
 
 
 ---

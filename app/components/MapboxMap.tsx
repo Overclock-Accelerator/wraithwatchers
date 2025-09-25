@@ -60,25 +60,18 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
 
         // ========================================
         // MAPBOX TOKEN CONFIGURATION:
-        // Option 1: Set NEXT_PUBLIC_MAPBOX_TOKEN in .env.local
-        // Option 2: Replace YOUR_MAPBOX_TOKEN_HERE with your actual token
-        // Get it from: https://account.mapbox.com/access-tokens/
+        // Using provided Mapbox token for afhaque account
         // ========================================
         const HARDCODED_MAPBOX_TOKEN = 'pk.eyJ1IjoiYWZoYXF1ZSIsImEiOiJjbWZ6eHdib3UwN3lmMmtwdG9vMWN6dXNsIn0.4CcHAooT7xMtEyUFDNFWIQ';
         
         // Get token from environment or hardcoded value
         const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || HARDCODED_MAPBOX_TOKEN;
         
-        // Check if token is still placeholder
-        if (token === 'YOUR_MAPBOX_TOKEN_HERE' || token === 'pk.eyJ1IjoiZXhhbXBsZSIsImEiOiJjbGF2ZWRhc2QifQ.example_token_replace_with_real_one') {
-          const errorMsg = 'Please set a valid Mapbox token';
+        // Validate token format
+        if (!token || !token.startsWith('pk.')) {
+          const errorMsg = 'Invalid or missing Mapbox token';
           console.error('❌ MAPBOX TOKEN ERROR:', errorMsg);
-          console.log('📝 Instructions:');
-          console.log('1. Go to https://account.mapbox.com/access-tokens/');
-          console.log('2. Create a new token or copy an existing one');
-          console.log('3. Either:');
-          console.log('   - Add NEXT_PUBLIC_MAPBOX_TOKEN=your_token to .env.local');
-          console.log('   - Replace YOUR_MAPBOX_TOKEN_HERE in the code with your token');
+          console.log('📝 Expected format: pk.eyJ...');
           setError(errorMsg);
           return;
         }
@@ -306,11 +299,6 @@ export default function MapboxMap({ sightings }: MapboxMapProps) {
         <div className="text-xs text-gray-300">
           {sightings.length} total sightings • Click clusters to zoom • Click markers for details
         </div>
-        {(!process.env.NEXT_PUBLIC_MAPBOX_TOKEN && !sightings.length) && (
-          <div className="text-xs text-yellow-300 mt-1">
-            ⚠️ Set up Mapbox token - check console for instructions
-          </div>
-        )}
       </div>
     </div>
   );
