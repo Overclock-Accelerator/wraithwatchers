@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxMap from './components/MapboxMap';
@@ -21,7 +22,13 @@ interface Sighting {
   imageUrl?: string | null;
 }
 
-function SightingsStats({ totalCount }: { totalCount: number }) {
+interface SightingsStatsProps {
+  totalCount: number;
+  mostRecentSighting: string;
+  mostGhostlyCity: string;
+}
+
+function SightingsStats({ totalCount, mostRecentSighting, mostGhostlyCity }: SightingsStatsProps) {
   return (
     <div className="mb-8">
       <h2 className="text-2xl font-bold mb-6">Sightings Stats</h2>
@@ -32,11 +39,11 @@ function SightingsStats({ totalCount }: { totalCount: number }) {
         </div>
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 text-center">
           <div className="text-sm text-gray-400 mb-2">Most Recent Sighting:</div>
-          <div className="text-3xl font-bold">2 Days Ago</div>
+          <div className="text-3xl font-bold">{mostRecentSighting}</div>
         </div>
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 text-center">
           <div className="text-sm text-gray-400 mb-2">Most Ghostly City:</div>
-          <div className="text-3xl font-bold">Albuquerque, NM</div>
+          <div className="text-3xl font-bold">{mostGhostlyCity}</div>
         </div>
       </div>
     </div>
@@ -117,11 +124,62 @@ function convertToSighting(dbSighting: GhostSighting): Sighting {
 }
 
 
+// Helper function to calculate time ago
+function getTimeAgo(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return '1 Day Ago';
+    if (diffDays < 30) return `${diffDays} Days Ago`;
+    if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      return months === 1 ? '1 Month Ago' : `${months} Months Ago`;
+    }
+    const years = Math.floor(diffDays / 365);
+    return years === 1 ? '1 Year Ago' : `${years} Years Ago`;
+  } catch {
+    return 'Unknown';
+  }
+}
+
+// Helper function to find most ghostly city
+function getMostGhostlyCity(sightings: Sighting[]): string {
+  if (sightings.length === 0) return 'Unknown';
+  
+  const cityCounts = new Map<string, number>();
+  
+  sightings.forEach(sighting => {
+    if (sighting.location && sighting.location !== 'Unknown, Unknown') {
+      const count = cityCounts.get(sighting.location) || 0;
+      cityCounts.set(sighting.location, count + 1);
+    }
+  });
+  
+  if (cityCounts.size === 0) return 'Unknown';
+  
+  let maxCity = '';
+  let maxCount = 0;
+  
+  cityCounts.forEach((count, city) => {
+    if (count > maxCount) {
+      maxCount = count;
+      maxCity = city;
+    }
+  });
+  
+  return maxCity || 'Unknown';
+}
+
 export default function Home() {
   const [sightingsData, setSightingsData] = useState<Sighting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mostRecentSighting, setMostRecentSighting] = useState<string>('Loading...');
+  const [mostGhostlyCity, setMostGhostlyCity] = useState<string>('Loading...');
 
   // Load data from Supabase on component mount
   useEffect(() => {
@@ -149,6 +207,16 @@ export default function Home() {
         
         console.log(`📊 Loaded ${convertedSightings.length} sightings from Supabase`);
         setSightingsData(convertedSightings);
+        
+        // Calculate stats
+        if (convertedSightings.length > 0) {
+          // Most recent sighting (data is already sorted by date descending)
+          const mostRecent = convertedSightings[0];
+          setMostRecentSighting(getTimeAgo(mostRecent.date));
+          
+          // Most ghostly city
+          setMostGhostlyCity(getMostGhostlyCity(convertedSightings));
+        }
       } catch (err) {
         console.error('Error loading Supabase data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load sightings');
@@ -186,22 +254,17 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header with Post Button */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">👻 Wraith Watchers</h1>
-            <p className="text-gray-400">Track paranormal activity across the globe</p>
-          </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-md font-medium transition-colors flex items-center gap-2"
-          >
-            <span className="text-xl">+</span>
-            Post a Sighting
-          </button>
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">👻 Wraith Watchers</h1>
+          <p className="text-gray-400">Track paranormal activity across the globe</p>
         </div>
 
-        <SightingsStats totalCount={sightingsData.length} />
+        <SightingsStats 
+          totalCount={sightingsData.length} 
+          mostRecentSighting={mostRecentSighting}
+          mostGhostlyCity={mostGhostlyCity}
+        />
         
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-6">Sightings Map</h2>
@@ -235,12 +298,6 @@ export default function Home() {
         </div>
 
         <SightingsTable sightings={sightingsData} />
-
-        {/* Add Sighting Modal */}
-        <AddSightingModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-        />
       </div>
     </div>
   );

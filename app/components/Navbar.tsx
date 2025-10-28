@@ -12,6 +12,12 @@ export default function Navbar() {
           </Link>
           <div className="flex space-x-2 sm:space-x-4">
             <Link 
+              href="/"
+              className="text-white hover:text-gray-300 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium"
+            >
+              Sightings Map
+            </Link>
+            <Link 
               href="/post-sighting"
               className="bg-orange-500 hover:bg-orange-600 text-white px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium"
             >
