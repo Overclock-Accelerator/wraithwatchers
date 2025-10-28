@@ -240,7 +240,13 @@ export default function Home() {
         (payload) => {
           console.log('New sighting added!', payload.new);
           const newSighting = convertToSighting(payload.new as GhostSighting);
-          setSightingsData(prev => [newSighting, ...prev]);
+          setSightingsData(prev => {
+            const updatedSightings = [newSighting, ...prev];
+            // Update stats when new sighting is added
+            setMostRecentSighting(getTimeAgo(newSighting.date));
+            setMostGhostlyCity(getMostGhostlyCity(updatedSightings));
+            return updatedSightings;
+          });
         }
       )
       .subscribe();
