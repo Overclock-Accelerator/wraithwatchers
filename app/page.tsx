@@ -132,7 +132,15 @@ function getTimeAgo(dateString: string): string {
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     
-    if (diffDays === 0) return 'Today';
+    if (diffDays === 0) {
+      // If today, show minutes or hours ago
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      
+      if (diffMinutes < 1) return 'Just Now';
+      if (diffMinutes < 60) return `${diffMinutes} Min${diffMinutes === 1 ? '' : 's'} Ago`;
+      if (diffHours < 24) return `${diffHours} Hour${diffHours === 1 ? '' : 's'} Ago`;
+    }
     if (diffDays === 1) return '1 Day Ago';
     if (diffDays < 30) return `${diffDays} Days Ago`;
     if (diffDays < 365) {
