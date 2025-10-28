@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 interface Sighting {
-  id: number;
+  id: number | string;
   date: string;
   time: string;
   type: string;
