@@ -176,6 +176,7 @@ function getMostGhostlyCity(sightings: Sighting[]): string {
 
 export default function Home() {
   const [sightingsData, setSightingsData] = useState<Sighting[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mostRecentSighting, setMostRecentSighting] = useState<string>('Loading...');
@@ -188,7 +189,19 @@ export default function Home() {
         setIsLoading(true);
         setError(null);
         
-        // Fetch all sightings from Supabase
+        // Fetch the total count first
+        const { count, error: countError } = await supabase
+          .from('ghost_sightings')
+          .select('*', { count: 'exact', head: true });
+        
+        if (countError) {
+          throw countError;
+        }
+        
+        setTotalCount(count || 0);
+        console.log(`📊 Total sightings in database: ${count}`);
+        
+        // Fetch all sightings from Supabase for display
         const { data, error } = await supabase
           .from('ghost_sightings')
           .select('*')
@@ -243,6 +256,7 @@ export default function Home() {
           setSightingsData(prev => {
             const updatedSightings = [newSighting, ...prev];
             // Update stats when new sighting is added
+            setTotalCount(c => c + 1);
             setMostRecentSighting(getTimeAgo(newSighting.date));
             setMostGhostlyCity(getMostGhostlyCity(updatedSightings));
             return updatedSightings;
@@ -267,7 +281,7 @@ export default function Home() {
         </div>
 
         <SightingsStats 
-          totalCount={sightingsData.length} 
+          totalCount={totalCount} 
           mostRecentSighting={mostRecentSighting}
           mostGhostlyCity={mostGhostlyCity}
         />
