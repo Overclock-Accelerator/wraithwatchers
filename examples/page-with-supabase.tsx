@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import MapboxMap from '../components/MapboxMap';
+import MapboxMap from '../app/components/MapboxMap';
 import { supabase, GhostSighting } from '@/lib/supabase';
 
 interface Sighting {

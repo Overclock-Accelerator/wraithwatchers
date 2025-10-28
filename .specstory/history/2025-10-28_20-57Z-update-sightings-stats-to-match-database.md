@@ -76,9 +76,376 @@ I can see the issue. The `SightingsStats` component has hardcoded values for "Mo
 
 Tool use: **search_replace**
 
+
+<details><summary>Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 7, lines removed: 1
+
+```diff
+@@ -23,5 +23,11 @@
+  }
+  
+- function SightingsStats({ totalCount }: { totalCount: number }) {
++ interface SightingsStatsProps {
++   totalCount: number;
++   mostRecentSighting: string;
++   mostGhostlyCity: string;
++ }
++ 
++ function SightingsStats({ totalCount, mostRecentSighting, mostGhostlyCity }: SightingsStatsProps) {
+    return (
+      <div className="mb-8">
+```
+
+**Chunk 2**
+Lines added: 2, lines removed: 2
+
+```diff
+@@ -34,9 +40,9 @@
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 text-center">
+            <div className="text-sm text-gray-400 mb-2">Most Recent Sighting:</div>
+-           <div className="text-3xl font-bold">2 Days Ago</div>
++           <div className="text-3xl font-bold">{mostRecentSighting}</div>
+          </div>
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 text-center">
+            <div className="text-sm text-gray-400 mb-2">Most Ghostly City:</div>
+-           <div className="text-3xl font-bold">Albuquerque, NM</div>
++           <div className="text-3xl font-bold">{mostGhostlyCity}</div>
+          </div>
+        </div>
+```
+
+</details>
+
 ---
 
+Tool use: **search_replace**
 
+
+<details><summary>Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 52, lines removed: undefined
+
+```diff
+@@ -124,9 +124,61 @@
+  }
+  
++ 
++ // Helper function to calculate time ago
++ function getTimeAgo(dateString: string): string {
++   try {
++     const date = new Date(dateString);
++     const now = new Date();
++     const diffMs = now.getTime() - date.getTime();
++     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
++     
++     if (diffDays === 0) return 'Today';
++     if (diffDays === 1) return '1 Day Ago';
++     if (diffDays < 30) return `${diffDays} Days Ago`;
++     if (diffDays < 365) {
++       const months = Math.floor(diffDays / 30);
++       return months === 1 ? '1 Month Ago' : `${months} Months Ago`;
++     }
++     const years = Math.floor(diffDays / 365);
++     return years === 1 ? '1 Year Ago' : `${years} Years Ago`;
++   } catch {
++     return 'Unknown';
++   }
++ }
++ 
++ // Helper function to find most ghostly city
++ function getMostGhostlyCity(sightings: Sighting[]): string {
++   if (sightings.length === 0) return 'Unknown';
++   
++   const cityCounts = new Map<string, number>();
++   
++   sightings.forEach(sighting => {
++     if (sighting.location && sighting.location !== 'Unknown, Unknown') {
++       const count = cityCounts.get(sighting.location) || 0;
++       cityCounts.set(sighting.location, count + 1);
++     }
++   });
++   
++   if (cityCounts.size === 0) return 'Unknown';
++   
++   let maxCity = '';
++   let maxCount = 0;
++   
++   cityCounts.forEach((count, city) => {
++     if (count > maxCount) {
++       maxCount = count;
++       maxCity = city;
++     }
++   });
++   
++   return maxCity || 'Unknown';
++ }
+  
+  export default function Home() {
+    const [sightingsData, setSightingsData] = useState<Sighting[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
++   const [mostRecentSighting, setMostRecentSighting] = useState<string>('Loading...');
++   const [mostGhostlyCity, setMostGhostlyCity] = useState<string>('Loading...');
+  
+    // Load data from Supabase on component mount
+```
+
+</details>
+
+---
+
+Tool use: **search_replace**
+
+
+<details><summary>Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 10, lines removed: undefined
+
+```diff
+@@ -208,4 +208,14 @@
+          console.log(`📊 Loaded ${convertedSightings.length} sightings from Supabase`);
+          setSightingsData(convertedSightings);
++         
++         // Calculate stats
++         if (convertedSightings.length > 0) {
++           // Most recent sighting (data is already sorted by date descending)
++           const mostRecent = convertedSightings[0];
++           setMostRecentSighting(getTimeAgo(mostRecent.date));
++           
++           // Most ghostly city
++           setMostGhostlyCity(getMostGhostlyCity(convertedSightings));
++         }
+        } catch (err) {
+          console.error('Error loading Supabase data:', err);
+```
+
+</details>
+
+---
+
+Tool use: **search_replace**
+
+
+<details><summary>Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 5, lines removed: 1
+
+```diff
+@@ -261,5 +261,9 @@
+          </div>
+  
+-         <SightingsStats totalCount={sightingsData.length} />
++         <SightingsStats 
++           totalCount={sightingsData.length} 
++           mostRecentSighting={mostRecentSighting}
++           mostGhostlyCity={mostGhostlyCity}
++         />
+          
+          <div className="mb-8">
+```
+
+</details>
+
+---
+
+<think><details><summary>Thought Process</summary>Good! I've updated the code. Now let me check for any linter errors to make sure everything is correct.</details></think>
+
+---
+
+Tool use: **read_lints**
+
+<details>
+          <summary>Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `app/page.tsx`
+
+Lint results
+
+Lint errors for `app/page.tsx`
+
+
+| Message | Range | Severity |
+|-------|-------|----------|
+| Type 'Sighting[]' is not assignable to type 'Sighting[]'. Two different types with this name exist, but they are unrelated.<br/>  Type 'Sighting' is not assignable to type 'Sighting'. Two different types with this name exist, but they are unrelated.<br/>    Types of property 'id' are incompatible.<br/>      Type 'string \| number' is not assignable to type 'number'.<br/>        Type 'string' is not assignable to type 'number'. | 290:26-290:35 | DIAGNOSTIC_SEVERITY_ERROR |
+| 'Link' is declared but its value is never read. | 4:1-4:30 | DIAGNOSTIC_SEVERITY_HINT |
+
+
+</details>
+
+---
+
+<think><details><summary>Thought Process</summary>There's a type mismatch. The issue is that the `id` field in the `Sighting` interface can be `number | string`, but somewhere it's expecting just `number`. Looking at the code, I see that the `Sighting` interface has `id: number | string`, but the error is on line 290, which is in the MapboxMap component call. Let me check if there's a conflicting type definition in MapboxMap.tsx.</details></think>
+
+---
+
+Let me check the MapboxMap component to see if there's a type mismatch:
+
+---
+
+Tool use: **read_file**
+
+Read file: app/components/MapboxMap.tsx
+
+---
+
+<think><details><summary>Thought Process</summary>I see the issue. The `MapboxMap.tsx` file has a `Sighting` interface with `id: number`, but in `page.tsx` the `Sighting` interface has `id: number | string`. These are conflicting type definitions. I need to update the MapboxMap component to use the same type definition.
+
+The simplest solution is to change the id type in MapboxMap to match the one in page.tsx (number | string), since the database returns string ids.</details></think>
+
+---
+
+I see the issue. The `Sighting` interface in `MapboxMap.tsx` has `id: number` but in `page.tsx` it has `id: number | string`. Let me fix this type mismatch:
+
+---
+
+Tool use: **search_replace**
+
+
+<details><summary>Edit file: app/components/MapboxMap.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -4,5 +4,5 @@
+  
+  interface Sighting {
+-   id: number;
++   id: number | string;
+    date: string;
+    time: string;
+```
+
+</details>
+
+---
+
+<think><details><summary>Thought Process</summary>Good! Now let me check if there are any linter errors remaining.</details></think>
+
+---
+
+Tool use: **read_lints**
+
+<details>
+          <summary>Read lints for 2 files</summary>
+      
+Lint paths:
+
+- `app/page.tsx`
+- `app/components/MapboxMap.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+
+---
+
+<think><details><summary>Thought Process</summary>Perfect! No linter errors. Now let me verify the changes work correctly. Let me also update the real-time subscription handler to also update the stats when a new sighting is added.</details></think>
+
+---
+
+Now I need to make sure the stats also update when new sightings are added in real-time. Let me update the subscription handler:
+
+---
+
+Tool use: **search_replace**
+
+
+<details><summary>Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 7, lines removed: 1
+
+```diff
+@@ -241,5 +241,11 @@
+            console.log('New sighting added!', payload.new);
+            const newSighting = convertToSighting(payload.new as GhostSighting);
+-           setSightingsData(prev => [newSighting, ...prev]);
++           setSightingsData(prev => {
++             const updatedSightings = [newSighting, ...prev];
++             // Update stats when new sighting is added
++             setMostRecentSighting(getTimeAgo(newSighting.date));
++             setMostGhostlyCity(getMostGhostlyCity(updatedSightings));
++             return updatedSightings;
++           });
+          }
+        )
+```
+
+</details>
+
+---
+
+<think><details><summary>Thought Process</summary>Great! Let me check for any linter errors again to make sure everything is still good.</details></think>
+
+---
+
+Tool use: **read_lints**
+
+<details>
+          <summary>Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `app/page.tsx`
+
+Lint results
+
+Lint errors for `app/page.tsx`
+
+
+| Message | Range | Severity |
+|-------|-------|----------|
+| 'Link' is declared but its value is never read. | 4:1-4:30 | DIAGNOSTIC_SEVERITY_HINT |
+
+
+</details>
+
+---
+
+<think><details><summary>Thought Process</summary>Perfect! All the changes are complete and there are no linter errors. Let me summarize what I did.</details></think>
+
+---
+
+Perfect! The sightings stats now dynamically reflect the database. Here's what I implemented:
+
+## Changes Made
+
+**1. Updated `SightingsStats` Component** (`app/page.tsx`)
+- Changed from hardcoded values to props-based dynamic values
+- Added `SightingsStatsProps` interface with three properties
+
+**2. Added Helper Functions** (`app/page.tsx`)
+- `getTimeAgo()`: Calculates human-readable time difference (e.g., "2 Days Ago", "3 Months Ago")
+- `getMostGhostlyCity()`: Analyzes all sightings to find the city with the most reports
+
+**3. Added State Management** (`app/page.tsx`)
+- `mostRecentSighting`: Tracks the most recent sighting timestamp
+- `mostGhostlyCity`: Tracks the city with the most sightings
+- Both initialize to "Loading..." during data fetch
+
+**4. Integrated Stats Calculation** (`app/page.tsx`)
+- Stats are calculated when data loads from Supabase
+- Stats automatically update when new sightings are added via real-time subscription
+
+**5. Fixed Type Mismatch** (`app/components/MapboxMap.tsx`)
+- Updated `id` field type from `number` to `number | string` to match database schema
+
+The stats now show:
+- **Total Sightings**: Total count from database
+- **Most Recent Sighting**: Time ago calculation based on the most recent sighting date
+- **Most Ghostly City**: City with the highest number of reported sightings
+
+All values update in real-time when new sightings are added to the database.
 
 ---
 
