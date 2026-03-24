@@ -1,13 +1,28 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+let _client: SupabaseClient | null = null;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Missing Supabase environment variables. Please check your .env.local file.');
+function getClient(): SupabaseClient {
+  if (_client) return _client;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables. Please check your .env.local file.');
+  }
+  _client = createClient(url, key);
+  return _client;
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Proxy defers createClient until first actual property access (e.g. .from(), .storage).
+// This prevents the SDK from throwing during Next.js build-time module initialization
+// when env vars are not available in the build environment.
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const client = getClient();
+    const value = (client as unknown as Record<string | symbol, unknown>)[prop as string];
+    return typeof value === 'function' ? (value as Function).bind(client) : value;
+  },
+});
 
 // Type definition for ghost sighting
 export interface GhostSighting {
