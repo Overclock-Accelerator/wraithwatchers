@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# SpecStory local history (often contains pasted tokens; do not commit)
+.specstory/
