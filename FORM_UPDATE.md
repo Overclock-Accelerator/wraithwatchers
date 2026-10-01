@@ -70,7 +70,7 @@ Updated the "Post a Sighting" form to match the main page's visual design and ad
 3. Click on the map where the sighting occurred
 4. Adjust pin position by dragging if needed
 5. Click "Post Your Sighting" button
-6. Sighting appears on main map within seconds (real-time update)
+6. Sighting appears on main map (home page reloads the data; other open tabs pick it up within ~15s via polling)
 
 ### Technical Flow:
 1. Modal opens → Map initializes with USA view
@@ -79,21 +79,20 @@ Updated the "Post a Sighting" form to match the main page's visual design and ad
 4. User can drag marker → Coordinates update on drag end
 5. Form submission validates location is selected
 6. API route processes submission
-7. Supabase stores data
-8. Real-time subscription updates main map
+7. Neon Postgres stores data
+8. Main map re-fetches (on navigation, and by polling /api/sightings/count every 15s)
 
 ## API Integration
 - Uses existing `/api/sightings` POST endpoint
 - Validates coordinates server-side
 - Returns success/error status
-- Triggers real-time update via Supabase
+- New rows are picked up by the home page poll
 
 ## Environment Variables Required
 ```env
 NEXT_PUBLIC_MAPBOX_TOKEN=your-mapbox-token-here
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEON_DATABASE_URL=your-neon-connection-string
+BLOB_READ_WRITE_TOKEN=your-blob-read-write-token
 ```
 
 ## Testing Checklist
