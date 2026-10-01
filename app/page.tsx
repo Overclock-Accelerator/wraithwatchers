@@ -5,7 +5,12 @@ import Link from 'next/link';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxMap from './components/MapboxMap';
-import { supabase, GhostSighting } from '@/lib/supabase';
+import type { GhostSighting } from '@/lib/types';
+
+// How often to check for new sightings (replaces Supabase realtime)
+const POLL_INTERVAL_MS = 15000;
+// Same row cap the page had under Supabase (PostgREST max rows)
+const SIGHTINGS_LIMIT = 1000;
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
@@ -107,7 +112,7 @@ function SightingsTable({ sightings }: { sightings: Sighting[] }) {
   );
 }
 
-// Convert Supabase GhostSighting to our Sighting format
+// Convert a GhostSighting row to our Sighting format
 function convertToSighting(dbSighting: GhostSighting): Sighting {
   return {
     id: dbSighting.id,
@@ -190,92 +195,89 @@ export default function Home() {
   const [mostRecentSighting, setMostRecentSighting] = useState<string>('Loading...');
   const [mostGhostlyCity, setMostGhostlyCity] = useState<string>('Loading...');
 
-  // Load data from Supabase on component mount
+  // Load data from the API on mount, then poll for new sightings
   useEffect(() => {
-    const loadSupabaseData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        // Fetch the total count first
-        const { count, error: countError } = await supabase
-          .from('ghost_sightings')
-          .select('*', { count: 'exact', head: true });
-        
-        if (countError) {
-          throw countError;
-        }
-        
-        setTotalCount(count || 0);
-        console.log(`📊 Total sightings in database: ${count}`);
-        
-        // Fetch all sightings from Supabase for display
-        const { data, error } = await supabase
-          .from('ghost_sightings')
-          .select('*')
-          .order('date_of_sighting', { ascending: false });
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (!data || data.length === 0) {
-          throw new Error('No sightings found in database');
-        }
-        
-        // Convert to our Sighting format
-        const convertedSightings = data.map(convertToSighting);
-        
-        console.log(`📊 Loaded ${convertedSightings.length} sightings from Supabase`);
-        setSightingsData(convertedSightings);
-        
-        // Calculate stats
-        if (convertedSightings.length > 0) {
-          // Most recent sighting (data is already sorted by date descending)
-          const mostRecent = convertedSightings[0];
-          setMostRecentSighting(getTimeAgo(mostRecent.date));
-          
-          // Most ghostly city
-          setMostGhostlyCity(getMostGhostlyCity(convertedSightings));
-        }
-      } catch (err) {
-        console.error('Error loading Supabase data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load sightings');
-      } finally {
-        setIsLoading(false);
+    let cancelled = false;
+    let currentCount: number | null = null;
+
+    const fetchCount = async (): Promise<number> => {
+      const res = await fetch('/api/sightings/count', { cache: 'no-store' });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.details || body.error || 'Failed to count sightings');
+      return body.count as number;
+    };
+
+    const loadSightings = async (count: number) => {
+      // Fetch sightings for display (newest first, capped server-side)
+      const res = await fetch(`/api/sightings?limit=${SIGHTINGS_LIMIT}`, { cache: 'no-store' });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.details || body.error || 'Failed to load sightings');
+      const data = body.data as GhostSighting[];
+
+      if (!data || data.length === 0) {
+        throw new Error('No sightings found in database');
+      }
+      if (cancelled) return;
+
+      // Convert to our Sighting format
+      const convertedSightings = data.map(convertToSighting);
+
+      console.log(`📊 Loaded ${convertedSightings.length} sightings`);
+      currentCount = count;
+      setTotalCount(count);
+      setSightingsData(convertedSightings);
+
+      // Calculate stats
+      if (convertedSightings.length > 0) {
+        // Most recent sighting (data is already sorted by date descending)
+        const mostRecent = convertedSightings[0];
+        setMostRecentSighting(getTimeAgo(mostRecent.date));
+
+        // Most ghostly city
+        setMostGhostlyCity(getMostGhostlyCity(convertedSightings));
       }
     };
 
-    loadSupabaseData();
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-    // Optional: Subscribe to real-time updates
-    const subscription = supabase
-      .channel('ghost_sightings_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'ghost_sightings'
-        },
-        (payload) => {
-          console.log('New sighting added!', payload.new);
-          const newSighting = convertToSighting(payload.new as GhostSighting);
-          setSightingsData(prev => {
-            const updatedSightings = [newSighting, ...prev];
-            // Update stats when new sighting is added
-            setTotalCount(c => c + 1);
-            setMostRecentSighting(getTimeAgo(newSighting.date));
-            setMostGhostlyCity(getMostGhostlyCity(updatedSightings));
-            return updatedSightings;
-          });
+        // Fetch the total count first
+        const count = await fetchCount();
+        console.log(`📊 Total sightings in database: ${count}`);
+
+        await loadSightings(count);
+      } catch (err) {
+        console.error('Error loading sightings:', err);
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load sightings');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    // Replaces the old realtime subscription: check the row count periodically
+    // and re-fetch the list when it changes.
+    const poll = async () => {
+      if (currentCount === null) return;
+      try {
+        const count = await fetchCount();
+        if (!cancelled && count !== currentCount) {
+          console.log('New sightings detected, refreshing');
+          await loadSightings(count);
         }
-      )
-      .subscribe();
+      } catch (err) {
+        console.error('Error polling sightings:', err);
+      }
+    };
 
-    // Cleanup subscription on unmount
+    loadData();
+    const interval = setInterval(poll, POLL_INTERVAL_MS);
+
+    // Stop polling on unmount
     return () => {
-      subscription.unsubscribe();
+      cancelled = true;
+      clearInterval(interval);
     };
   }, []);
 
@@ -310,7 +312,7 @@ export default function Home() {
                   <div className="text-red-500 mb-4">⚠️ Error Loading Data</div>
                   <div className="text-gray-300">{error}</div>
                   <div className="text-sm text-gray-400 mt-2">
-                    Make sure your Supabase credentials are configured in .env.local
+                    Make sure the database connection is configured in .env.local
                   </div>
                 </div>
               </div>
@@ -319,7 +321,7 @@ export default function Home() {
             )}
             <div className="p-4 bg-gray-800 text-center">
               <div className="text-sm text-gray-300">
-                Powered by Mapbox GL JS & Supabase • {sightingsData.length} sightings loaded
+                Powered by Mapbox GL JS & Neon • {sightingsData.length} sightings loaded
               </div>
             </div>
           </div>

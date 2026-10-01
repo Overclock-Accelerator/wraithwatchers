@@ -6,15 +6,15 @@ A Next.js application for tracking and visualizing paranormal activity across th
 
 - 🗺️ **Interactive Map**: Visualize ghost sightings using Mapbox GL JS with clustering
 - 📸 **Image Uploads**: Upload photos as evidence of paranormal activity
-- 📊 **Real-time Data**: Powered by Supabase for instant updates
+- 📊 **Live Data**: New sightings show up automatically (polled every 15s)
 - 🌙 **Dark Theme**: Spooky dark UI perfect for ghost hunting
 - 📱 **Responsive Design**: Works on desktop and mobile devices
 
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router)
-- **Database**: Supabase (PostgreSQL)
-- **Storage**: Supabase Storage
+- **Database**: Neon (PostgreSQL), queried server-side only
+- **Storage**: Vercel Blob
 - **Maps**: Mapbox GL JS
 - **Styling**: Tailwind CSS
 - **Language**: TypeScript
@@ -24,7 +24,7 @@ A Next.js application for tracking and visualizing paranormal activity across th
 ### Prerequisites
 
 - Node.js 18+ installed
-- A Supabase account
+- A Neon database and a Vercel Blob store
 - A Mapbox account
 
 ### 1. Clone and Install
@@ -46,10 +46,11 @@ cp env.template .env.local
 Fill in your credentials in `.env.local`:
 
 ```bash
-# Supabase (from https://app.supabase.com)
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# Neon Postgres (server-only)
+NEON_DATABASE_URL=your-neon-connection-string
+
+# Vercel Blob (server-only)
+BLOB_READ_WRITE_TOKEN=your-blob-read-write-token
 
 # Mapbox (from https://account.mapbox.com)
 NEXT_PUBLIC_MAPBOX_TOKEN=your-mapbox-token
@@ -57,15 +58,14 @@ NEXT_PUBLIC_MAPBOX_TOKEN=your-mapbox-token
 
 ### 3. Database Setup
 
-Follow the instructions in `SUPABASE_MIGRATION.md` to:
-- Create the `ghost_sightings` table
-- Set up proper columns and indexes
+The app expects a `ghost_sightings` table (uuid `id`, `date_of_sighting` date, `latitude`/`longitude`
+numeric, `city`, `state`, `notes`, `time_of_day`, `apparition_tag`, `image_link`, `created_at`, `updated_at`)
+in the Neon database.
 
 ### 4. Storage Setup
 
-Follow the instructions in `SUPABASE_STORAGE_SETUP.md` to:
-- Create the `ghost-sightings-images` storage bucket
-- Configure storage policies for uploads
+Images are stored in Vercel Blob with public access under `ghost-sightings-images/anonymous/<timestamp>-<random>.<ext>`.
+Connect a Blob store to the Vercel project so `BLOB_READ_WRITE_TOKEN` is set.
 
 ### 5. Run Development Server
 
@@ -84,7 +84,7 @@ Users can now upload photos when posting ghost sightings!
 - Image preview before submission
 - Supports JPEG, PNG, GIF, WebP (max 5MB)
 - Images appear in map popups
-- Stored securely in Supabase Storage
+- Stored in Vercel Blob (uploaded directly from the browser with a short-lived token from `/api/images/upload`)
 
 **Setup:** See `IMAGE_UPLOAD_README.md` for detailed instructions.
 
@@ -102,16 +102,16 @@ wraithwatchers/
 │   ├── page.tsx             # Home page with map
 │   └── layout.tsx           # Root layout
 ├── lib/
-│   ├── supabase.ts          # Supabase client & helpers
-│   └── storage.ts           # Storage upload utilities
+│   ├── db.ts                # Neon client & query helpers (server-only)
+│   ├── storage.ts           # Vercel Blob delete/list helpers (server-only)
+│   ├── upload-image.ts      # Browser-side image upload
+│   └── types.ts             # GhostSighting type
 ├── public/data/             # CSV data files
 └── scripts/                 # Migration scripts
 ```
 
 ## Documentation
 
-- `SUPABASE_MIGRATION.md` - Database setup
-- `SUPABASE_STORAGE_SETUP.md` - Storage bucket configuration
 - `IMAGE_UPLOAD_README.md` - Image upload feature guide
 - `MAPBOX_SETUP.md` - Mapbox integration
 - `FORM_UPDATE.md` - Form development notes
@@ -180,8 +180,6 @@ MIT License - feel free to use this project for your own paranormal investigatio
 ## Support
 
 Having issues? Check these resources:
-- `SUPABASE_MIGRATION.md` for database setup
-- `SUPABASE_STORAGE_SETUP.md` for storage issues
 - `IMAGE_UPLOAD_README.md` for upload problems
 - Browser console for detailed error messages
 

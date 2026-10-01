@@ -1,83 +1,23 @@
-import { supabase } from './supabase';
+import 'server-only';
+import { del, list } from '@vercel/blob';
+import { IMAGE_PATH_PREFIX } from './image-validation';
 
-const BUCKET_NAME = 'ghost-sightings-images';
-
-/**
- * Upload an image file to Supabase Storage
- * @param file - The image file to upload
- * @param userId - Optional user ID to organize uploads (can use 'anonymous' for public uploads)
- * @returns The public URL of the uploaded image
- */
-export async function uploadSightingImage(
-  file: File,
-  userId: string = 'anonymous'
-): Promise<string> {
-  try {
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      throw new Error('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.');
-    }
-
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-    if (file.size > maxSize) {
-      throw new Error('File too large. Maximum size is 5MB.');
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const fileExt = file.name.split('.').pop() || 'jpg';
-    const fileName = `${userId}/${timestamp}-${randomString}.${fileExt}`;
-
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-    if (error) {
-      console.error('Upload error:', error);
-      throw new Error(`Failed to upload image: ${error.message}`);
-    }
-
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(data.path);
-
-    return urlData.publicUrl;
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    throw error;
-  }
-}
+// Images live in Vercel Blob (public access) under
+// ghost-sightings-images/<userId>/<timestamp>-<random>.<ext>, mirroring the old Supabase bucket layout.
+// Uploads go through app/api/images/upload (client side: lib/upload-image.ts).
+// BLOB_READ_WRITE_TOKEN is read from the server environment by @vercel/blob.
 
 /**
- * Delete an image from Supabase Storage
+ * Delete an image from Vercel Blob
  * @param imageUrl - The public URL of the image to delete
  */
 export async function deleteSightingImage(imageUrl: string): Promise<void> {
   try {
-    // Extract file path from URL
     const url = new URL(imageUrl);
-    const pathParts = url.pathname.split(`/${BUCKET_NAME}/`);
-    if (pathParts.length < 2) {
+    if (!url.hostname.endsWith('.blob.vercel-storage.com')) {
       throw new Error('Invalid image URL');
     }
-    const filePath = pathParts[1];
-
-    const { error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .remove([filePath]);
-
-    if (error) {
-      console.error('Delete error:', error);
-      throw new Error(`Failed to delete image: ${error.message}`);
-    }
+    await del(imageUrl);
   } catch (error) {
     console.error('Error deleting image:', error);
     throw error;
@@ -85,36 +25,17 @@ export async function deleteSightingImage(imageUrl: string): Promise<void> {
 }
 
 /**
- * Get a list of all images for a user
+ * Get a list of all images for a user (newest first, max 100)
  * @param userId - The user ID to get images for
  */
 export async function getUserImages(userId: string = 'anonymous'): Promise<string[]> {
   try {
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .list(userId, {
-        limit: 100,
-        offset: 0,
-        sortBy: { column: 'created_at', order: 'desc' },
-      });
-
-    if (error) {
-      console.error('List error:', error);
-      throw new Error(`Failed to list images: ${error.message}`);
-    }
-
-    // Get public URLs for all files
-    const urls = data.map((file) => {
-      const { data: urlData } = supabase.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(`${userId}/${file.name}`);
-      return urlData.publicUrl;
-    });
-
-    return urls;
+    const { blobs } = await list({ prefix: `${IMAGE_PATH_PREFIX}/${userId}/`, limit: 100 });
+    return blobs
+      .sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime())
+      .map((blob) => blob.url);
   } catch (error) {
     console.error('Error listing images:', error);
     throw error;
   }
 }
-
