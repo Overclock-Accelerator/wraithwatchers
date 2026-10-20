@@ -63,7 +63,7 @@ Add a new ghost sighting to the database.
 Fetch ghost sightings from the database.
 
 **Query Parameters:**
-- `limit` (optional, default: 100) - Maximum number of sightings to return
+- `limit` (optional, default: 100, max: 1000) - Maximum number of sightings to return
 - `state` (optional) - Filter by state
 
 **Examples:**
@@ -91,9 +91,19 @@ GET /api/sightings?limit=10&state=New York
 
 ---
 
+### GET /api/sightings/count
+Total number of sightings.
+
+**Response (200 OK):**
+```json
+{ "count": 12010 }
+```
+
+---
+
 ## Security
 
-- Uses Supabase service role key for server-side operations
+- Queries Neon Postgres server-side via `NEON_DATABASE_URL` (never exposed to the browser)
 - Validates all input data before database insertion
 - Coordinates are validated to be within valid ranges
 - All errors are properly logged and handled
@@ -102,5 +112,5 @@ GET /api/sightings?limit=10&state=New York
 
 ## Real-time Updates
 
-When a new sighting is added via the API, it will automatically appear in the UI thanks to Supabase real-time subscriptions (configured in `app/page.tsx`).
+When a new sighting is added via the API, the home page picks it up automatically: it polls `/api/sightings/count` every 15 seconds and re-fetches the list when the count changes (see `app/page.tsx`).
 
